@@ -20,6 +20,12 @@ var (
 	ErrWrite  = errors.New("write error")
 )
 
+type Updater interface {
+	CheckForUpdates() error
+	CheckForUpdatesSilent() error
+	HasUpdate() (*gselfupdate.Release, bool, error)
+}
+
 type updater struct {
 	currentVersion semver.Version
 	wailsContext   context.Context
