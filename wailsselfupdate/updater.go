@@ -20,9 +20,12 @@ var (
 	ErrWrite  = errors.New("write error")
 )
 
+var _ Updater = &updater{}
+
 type Updater interface {
 	CheckForUpdates() error
 	CheckForUpdatesSilent() error
+	CheckForUpdatesBackground() error
 	HasUpdate() (*gselfupdate.Release, bool, error)
 }
 
@@ -38,6 +41,33 @@ func NewUpdater(currentVersion semver.Version, wailsContext context.Context, slu
 		wailsContext:   wailsContext,
 		slug:           slug,
 	}
+}
+
+func (u *updater) CheckForUpdatesBackground() error {
+	release, found, err := u.HasUpdate()
+
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return nil
+	}
+
+	// Update available
+	response := u.displayUpdateDialog(release.Version, release.ReleaseNotes)
+
+	if response == "Update" || response == "Yes" {
+		if goruntime.GOOS == "darwin" {
+			u.updateDarwin(release)
+		} else if goruntime.GOOS == "windows" {
+			u.updateWindows(release)
+		} else {
+			return errors.New("unsupported")
+		}
+	}
+
+	return nil
 }
 
 func (u *updater) CheckForUpdates() error {
